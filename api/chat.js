@@ -22,7 +22,6 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Set CORS headers for all responses
   Object.entries(CORS_HEADERS).forEach(([key, value]) => {
     res.setHeader(key, value);
   });
@@ -46,26 +45,25 @@ module.exports = async function handler(req, res) {
       content: message,
     });
 
-    // Run the assistant
-    const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
+    // Use streaming to avoid Vercel timeout on Hobby plan
+    let responseText = "";
+    const stream = openai.beta.threads.runs.stream(thread.id, {
       assistant_id: process.env.ASSISTANT_ID,
     });
 
-    if (run.status !== "completed") {
-      throw new Error(`Run ended with status: ${run.status}`);
+    for await (const event of stream) {
+      if (
+        event.event === "thread.message.delta" &&
+        event.data?.delta?.content?.[0]?.type === "text"
+      ) {
+        responseText += event.data.delta.content[0].text.value;
+      }
     }
 
-    // Get the assistant's response
-    const messages = await openai.beta.threads.messages.list(thread.id, {
-      order: "desc",
-      limit: 1,
-    });
-
-    const assistantMessage = messages.data[0];
-    const responseText =
-      assistantMessage?.content?.[0]?.type === "text"
-        ? assistantMessage.content[0].text.value
-        : "I'm sorry, I couldn't process that. Please call us at (718) 339-8852.";
+    if (!responseText) {
+      responseText =
+        "I'm sorry, I couldn't process that. Please call us at (718) 339-8852.";
+    }
 
     res.status(200).json({
       response: responseText,
