@@ -1,6 +1,4 @@
-const OpenAI = require("openai");
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const OPENAI_BASE = "https://api.openai.com/v1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -8,8 +6,28 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+function headers() {
+  return {
+    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    "Content-Type": "application/json",
+    "OpenAI-Beta": "assistants=v2",
+  };
+}
+
+async function openaiRequest(method, path, body) {
+  const res = await fetch(`${OPENAI_BASE}${path}`, {
+    method,
+    headers: headers(),
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenAI ${path}: ${res.status} ${err}`);
+  }
+  return res.json();
+}
+
 module.exports = async function handler(req, res) {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     res.writeHead(200, CORS_HEADERS);
     res.end();
@@ -37,33 +55,46 @@ module.exports = async function handler(req, res) {
     // Create or reuse thread
     const thread = threadId
       ? { id: threadId }
-      : await openai.beta.threads.create();
+      : await openaiRequest("POST", "/threads", {});
 
     // Add message to thread
-    await openai.beta.threads.messages.create(thread.id, {
+    await openaiRequest("POST", `/threads/${thread.id}/messages`, {
       role: "user",
       content: message,
     });
 
-    // Use streaming to avoid Vercel timeout on Hobby plan
-    let responseText = "";
-    const stream = openai.beta.threads.runs.stream(thread.id, {
+    // Create a run
+    const run = await openaiRequest("POST", `/threads/${thread.id}/runs`, {
       assistant_id: process.env.ASSISTANT_ID,
     });
 
-    for await (const event of stream) {
-      if (
-        event.event === "thread.message.delta" &&
-        event.data?.delta?.content?.[0]?.type === "text"
-      ) {
-        responseText += event.data.delta.content[0].text.value;
-      }
+    // Poll until complete
+    let status = run.status;
+    let runData = run;
+    while (status === "queued" || status === "in_progress") {
+      await new Promise((r) => setTimeout(r, 1000));
+      runData = await openaiRequest(
+        "GET",
+        `/threads/${thread.id}/runs/${run.id}`
+      );
+      status = runData.status;
     }
 
-    if (!responseText) {
-      responseText =
-        "I'm sorry, I couldn't process that. Please call us at (718) 339-8852.";
+    if (status !== "completed") {
+      throw new Error(`Run ended with status: ${status}`);
     }
+
+    // Get messages
+    const messages = await openaiRequest(
+      "GET",
+      `/threads/${thread.id}/messages?order=desc&limit=1`
+    );
+
+    const assistantMessage = messages.data?.[0];
+    const responseText =
+      assistantMessage?.content?.[0]?.type === "text"
+        ? assistantMessage.content[0].text.value
+        : "I'm sorry, I couldn't process that. Please call us at (718) 339-8852.";
 
     res.status(200).json({
       response: responseText,
