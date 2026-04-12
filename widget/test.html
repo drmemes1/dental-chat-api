@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QSD Chat Widget v2 — Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #F3F4F6;
+      color: #1F2937;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    p.sub { color: #6B7280; margin-bottom: 32px; font-size: 15px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 12px; color: #1E8A8A; }
+    .card ul { list-style: none; padding: 0; }
+    .card li {
+      padding: 8px 0;
+      border-bottom: 1px solid #F3F4F6;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card li:last-child { border: none; }
+    .check { color: #10B981; font-weight: bold; }
+    .dot { color: #F59E0B; }
+    code {
+      background: #F3F4F6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🦷 QSD Chat Widget v2</h1>
+  <p class="sub">Preview page — click the teal chat bubble in the bottom right.</p>
+
+  <div class="card">
+    <h2>Checklist</h2>
+    <ul>
+      <li><span class="check">✓</span> Widget loaded</li>
+      <li><span class="check">✓</span> Gradient header with avatar</li>
+      <li><span class="check">✓</span> Message bubbles with timestamps</li>
+      <li><span class="check">✓</span> Typing indicator animation</li>
+      <li><span class="check">✓</span> Call button above chat toggle</li>
+      <li><span class="check">✓</span> Disclaimer bar</li>
+      <li><span class="check">✓</span> ADA compliant (ARIA, focus trap, keyboard nav)</li>
+      <li><span class="check">✓</span> Mobile responsive</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Test</h2>
+    <ul>
+      <li><span class="dot">→</span> Click the <strong>teal chat bubble</strong> to open</li>
+      <li><span class="dot">→</span> Send a message like "Do you do deep cleanings?"</li>
+      <li><span class="dot">→</span> Press <code>Escape</code> to close</li>
+      <li><span class="dot">→</span> Press <code>Tab</code> to check focus order</li>
+      <li><span class="dot">→</span> Resize to mobile width to check responsive</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>API Endpoint</h2>
+    <ul>
+      <li><code>https://dental-chat-api.vercel.app/api/chat</code></li>
+    </ul>
+  </div>
+
+  <!-- Load the widget -->
+  <script>
+    fetch('QSD_Chat_Widget_v2.html')
+      .then(r => r.text())
+      .then(html => {
+        var div = document.createElement('div');
+        div.innerHTML = html;
+        // Move styles to head
+        div.querySelectorAll('style').forEach(s => document.head.appendChild(s));
+        // Move non-script content to body
+        Array.from(div.children).forEach(child => {
+          if (child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+            document.body.appendChild(child);
+          }
+        });
+        // Execute scripts
+        div.querySelectorAll('script').forEach(s => {
+          var ns = document.createElement('script');
+          ns.textContent = s.textContent;
+          document.body.appendChild(ns);
+        });
+      });
+  </script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QSD Note Helper</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #08080f; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState } = React;
+
+const PASSWORD = "QSD2024!";
+
+const SYSTEM_PROMPT = `You are a dental chart note assistant for Dr. IK at Quentin Smile Dental in Brooklyn, NY. You write chart notes in Dr. IK's exact voice and style.
+
+STYLE RULES (non-negotiable):
+- No bullet points anywhere in the note body — flowing paragraphs only
+- Never start with a header or title — start directly with "Patient presents for..."
+- End every note with a blank line, then "NV: [next visit]" then "IK DDS"
+- Prognosis line only when clinically relevant (guarded, poor, good)
+- "Patient verbalized understanding." for any risk discussions
+- Keep it clean and concise — no filler, no over-explaining
+- Plain text only — no bold, no markdown, no formatting
+
+STANDARD BLOCKS (include when relevant):
+RMH: ____ / Meds: ____ / Allergies: ____ (use info if given, otherwise leave blanks)
+
+EOE: An extraoral soft tissue exam showed no clinically visible signs of pathology, inflammation, or asymmetry in areas including but not limited to: Eyes, ears, lymph nodes (Occipital, Auricular, Cervical, Submental, Submandibular) Muscles (Masseter, Temporalis, Sternocleidomastoid, Mylohyoid)
+
+IOE: An intraoral soft tissue exam showed no clinically visible signs of pathology, inflammation, or asymmetry in areas including but not limited to: Lips, Labial & Buccal Mucosa, Mucobuccal Fold, Hard Palate, Soft Palate, Maxillary Tuberosities, Retromolar Pads, Tongue: Dorsum, Lateral, Ventral, Floor of Mouth, and clinically visible oropharynx.
+
+STANDARD PHRASES:
+- Anesthetic: "Administered X carpule(s) of [anesthetic] to [location]. Adequate anesthesia confirmed."
+- Fillings: "Decay excavated. No pulp exposure. Tooth etched, G-Bond applied, and restored with [shade] composite. Occlusion checked."
+- Crowns: "Decay excavated. Tooth prepared for full coverage crown. No pulp exposure. Scanned for crown fabrication. Temporized with Luxatemp [shade]."
+- Default composite shade: A2 unless told otherwise
+- Default anesthetic: 4% Orabloc unless told otherwise (2% lido if specified)
+- "Patient tolerated procedure well." to close treatment sections
+- Post-op: "Post-operative instructions provided. Patient verbalized understanding."
+
+REAL EXAMPLES OF DR. IK'S NOTE STYLE:
+
+FILLING EXAMPLE:
+Patient presents for buccal restorations #6B, #12B, and #22B. Treatment completed without anesthesia per patient preference. Decay and debris removed from all sites. Air abrasion completed. Teeth etched, G-Bond applied, and restored with A2 composite. Occlusion and contacts checked. Excess removed and polished. Patient tolerated procedure well.
+NV: Recare
+IK DDS
+
+EXAM EXAMPLE:
+Patient presents for hygiene recare examination.
+RMH: ____
+Meds: ____
+Allergies: ____
+EOE: An extraoral soft tissue exam showed no clinically visible signs of pathology...
+IOE: An intraoral soft tissue exam showed no clinically visible signs of pathology...
+4 BWX and 3 PAs taken and evaluated. No significant radiographic findings noted. #12 DO: Restoration placed in 2019. May require repair or replacement. Will continue to monitor.
+NV: 6 month recare, continue monitoring #12
+IK DDS
+
+CROWN EXAMPLE:
+Patient presents for crown preparations #30 and #15.
+RMH: ____
+Meds: ____
+Allergies: ____
+Risks, benefits, and alternatives of crown treatment discussed with patient prior to procedure including but not limited to post-operative sensitivity, possible need for root canal therapy, and potential for crown failure. Patient verbalized understanding and agreed to proceed.
+Administered 2 carpules of 4% Orabloc to buccal and PDL for #30 and #15. Adequate anesthesia confirmed.
+#30: Decay excavated. Tooth prepared for full coverage crown. No pulp exposure. Scanned for crown fabrication. Temporized with Luxatemp A2.
+#15: Decay excavated. Tooth prepared for full coverage crown. No pulp exposure. Scanned for crown fabrication. Temporized with Luxatemp A2.
+Occlusion and margins checked on temporary restorations. Excess cement removed. Patient tolerated procedure well.
+NV: Crown delivery #30 and #15
+IK DDS
+
+OVERDENTURE EXAMPLE:
+Patient presents for upper denture and lower overdenture delivery. Implants at sites #22, #24, and #27. Locator abutments placed and torqued to manufacturer specifications. Two blue and one gray nylon attachments inserted into denture housing. Site #24 required chairside pickup with acrylic to incorporate locator housing into denture base. Upper and lower dentures tried in, fit verified, and occlusion checked and adjusted as needed. Excess acrylic trimmed and polished. Patient educated on insertion, removal, and daily care of dentures and abutments. Advised to remove dentures at night and clean abutments daily. Patient tolerated procedure well.
+NV: 7-14 day follow-up
+IK DDS
+
+OUTPUT: Plain text chart note only. No intro, no commentary, no markdown.`;
+
+const NOTE_TYPES = [
+  {
+    id: "exam", label: "Exam / Recall", icon: "\u{1F50D}",
+    quickOptions: [
+      { label: "New patient", key: "newPt", prompt: "new patient" },
+      { label: "Returning (1 yr)", key: "return1", prompt: "returning patient, ~1 year" },
+      { label: "Returning (2+ yrs)", key: "return2", prompt: "returning patient, more than 2 years" },
+      { label: "Hygiene exam", key: "hyg", prompt: "hygiene recare exam" },
+      { label: "Limited exam", key: "ltd", prompt: "limited exam, specific complaint" },
+      { label: "Pediatric", key: "peds", prompt: "pediatric patient with parent" },
+    ],
+    xrayOptions: ["Pano", "4 BWX", "2 BWX", "PAs", "CBCT", "No x-rays"],
+    fields: [
+      { key: "chiefComplaint", label: "Chief complaint / reason for visit", placeholder: "e.g. pt c/o sensitivity #14, or routine recare" },
+      { key: "findings", label: "Findings (teeth, issues, recommendations)", placeholder: "e.g. #3 needs crown, #19 WNL, #30 watch" },
+      { key: "rmh", label: "Medical history / meds / allergies", placeholder: "e.g. taking synthroid, allergic to biaxin \u2014 or leave blank" },
+    ]
+  },
+  {
+    id: "filling", label: "Filling", icon: "\u{1F9B7}",
+    quickOptions: [
+      { label: "With anesthesia", key: "withAnes", prompt: "with anesthesia" },
+      { label: "No anesthesia", key: "noAnes", prompt: "without anesthesia, patient preference" },
+      { label: "With rubber dam", key: "rd", prompt: "under rubber dam isolation" },
+      { label: "Air abrasion", key: "air", prompt: "air abrasion prep" },
+      { label: "With liner", key: "liner", prompt: "with liner/pulp cap placed (deep decay)" },
+    ],
+    fields: [
+      { key: "teeth", label: "Tooth # and surfaces", placeholder: "e.g. #19 MOD, #3 DO, #14 O" },
+      { key: "shade", label: "Composite shade", placeholder: "A2 (default if blank)" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. decay deeper than expected, pt tolerated well" },
+    ]
+  },
+  {
+    id: "crown", label: "Crown Prep", icon: "\u{1F451}",
+    quickOptions: [
+      { label: "Single crown", key: "single", prompt: "single crown preparation" },
+      { label: "Multiple crowns", key: "multi", prompt: "multiple crown preparations" },
+      { label: "Crown + RCT", key: "rct", prompt: "crown prep post root canal" },
+      { label: "Implant crown", key: "impl", prompt: "implant crown" },
+      { label: "Try-in visit", key: "tryin", prompt: "crown try-in" },
+      { label: "Crown delivery", key: "delivery", prompt: "crown delivery and cementation" },
+    ],
+    fields: [
+      { key: "teeth", label: "Tooth #(s)", placeholder: "e.g. #30, #15" },
+      { key: "shade", label: "Shade", placeholder: "e.g. A2, B1, 2M2" },
+      { key: "lab", label: "Lab (if known)", placeholder: "e.g. Creodent, in-house" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. scanned with iTero, temp placed, pt happy with shade" },
+    ]
+  },
+  {
+    id: "rct", label: "Root Canal", icon: "\u26A1",
+    quickOptions: [
+      { label: "Anterior", key: "ant", prompt: "anterior tooth root canal" },
+      { label: "Bicuspid", key: "bic", prompt: "bicuspid root canal" },
+      { label: "Molar", key: "mol", prompt: "molar root canal" },
+      { label: "Retreatment", key: "retreat", prompt: "root canal retreatment" },
+      { label: "Pulpotomy (emergency)", key: "pulp", prompt: "emergency pulpotomy, interim" },
+      { label: "Referral to endo", key: "ref", prompt: "referred out to endodontist" },
+    ],
+    fields: [
+      { key: "tooth", label: "Tooth #", placeholder: "e.g. #19" },
+      { key: "canals", label: "# of canals / canal names", placeholder: "e.g. 3 canals: MB, ML, D" },
+      { key: "wl", label: "Working length", placeholder: "e.g. MB 19mm, ML 18mm, D 20mm" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. calcified MB2, temp placed, refer to Dr. Diana" },
+    ]
+  },
+  {
+    id: "extraction", label: "Extraction", icon: "\u2702\uFE0F",
+    quickOptions: [
+      { label: "Simple", key: "simple", prompt: "simple extraction" },
+      { label: "Surgical", key: "surg", prompt: "surgical extraction" },
+      { label: "Wisdom - soft tissue", key: "wst", prompt: "impacted wisdom tooth, soft tissue" },
+      { label: "Wisdom - partial bony", key: "wpb", prompt: "impacted wisdom tooth, partial bony" },
+      { label: "Wisdom - full bony", key: "wfb", prompt: "impacted wisdom tooth, full bony" },
+      { label: "With bone graft", key: "graft", prompt: "extraction with socket preservation bone graft" },
+      { label: "Immediate implant", key: "imm", prompt: "extraction with immediate implant placement" },
+    ],
+    fields: [
+      { key: "tooth", label: "Tooth #", placeholder: "e.g. #17" },
+      { key: "anesthetic", label: "Anesthetic", placeholder: "e.g. 2 carpules 4% Orabloc buccal + lingual" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. sectioned in 2 pieces, graft placed, sutured, postop given" },
+    ]
+  },
+  {
+    id: "implant", label: "Implant", icon: "\u{1F529}",
+    quickOptions: [
+      { label: "Implant placement", key: "place", prompt: "implant placement" },
+      { label: "With bone graft", key: "graft", prompt: "implant placement with bone graft" },
+      { label: "With sinus lift", key: "sinus", prompt: "implant with sinus lift" },
+      { label: "Stage 2 / uncovery", key: "stage2", prompt: "stage 2 implant uncovery" },
+      { label: "Implant consult", key: "consult", prompt: "implant consultation" },
+      { label: "CBCT review", key: "cbct", prompt: "CBCT reviewed for implant planning" },
+    ],
+    fields: [
+      { key: "site", label: "Implant site #", placeholder: "e.g. #19" },
+      { key: "specs", label: "Implant specs / brand", placeholder: "e.g. 3.7x10 Biohorizon, torqued 35Ncm" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. healing abutment placed, bone graft with allograft + membrane" },
+    ]
+  },
+  {
+    id: "denture", label: "Dentures", icon: "\u{1F601}",
+    quickOptions: [
+      { label: "Final delivery", key: "del", prompt: "final denture delivery" },
+      { label: "Overdenture delivery", key: "over", prompt: "implant-supported overdenture delivery" },
+      { label: "Immediate denture", key: "imm", prompt: "immediate denture delivery" },
+      { label: "Flipper delivery", key: "flip", prompt: "acrylic flipper delivery" },
+      { label: "Reline", key: "reline", prompt: "denture reline" },
+      { label: "Adjustment", key: "adj", prompt: "denture adjustment" },
+      { label: "Impression visit", key: "imp", prompt: "denture impression" },
+    ],
+    fields: [
+      { key: "type", label: "Upper / lower / both", placeholder: "e.g. upper and lower, lower only" },
+      { key: "implants", label: "Implant sites (if overdenture)", placeholder: "e.g. #22, #24, #27" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. 2 blue 1 gray nylon, pickup on #24, occlusion adjusted" },
+    ]
+  },
+  {
+    id: "perio", label: "Perio / Cleaning", icon: "\u{1F9F9}",
+    quickOptions: [
+      { label: "Prophy (healthy)", key: "prophy", prompt: "routine prophylaxis, healthy patient" },
+      { label: "Perio maintenance", key: "pm", prompt: "periodontal maintenance" },
+      { label: "Full mouth debridement", key: "fmd", prompt: "full mouth debridement, >1 year since cleaning" },
+      { label: "SRP - all 4 quads", key: "srp4", prompt: "scaling and root planing all 4 quadrants" },
+      { label: "SRP - selective", key: "srps", prompt: "selective scaling and root planing" },
+      { label: "With Arestin", key: "ares", prompt: "with Arestin placed in pockets" },
+    ],
+    fields: [
+      { key: "pocketing", label: "Pocketing / perio findings", placeholder: "e.g. generalized 4-5mm, #3 has 6-8mm DL, BOP on posteriors" },
+      { key: "areas", label: "Areas treated / quads", placeholder: "e.g. UL, LL quads / all 4 quads" },
+      { key: "notes", label: "Additional notes", placeholder: "e.g. Arestin on #3, #14 \u2014 irrigated, pt educated on hygiene" },
+    ]
+  },
+];
+
+function NoteHelper() {
+  const [authed, setAuthed] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState(false);
+  const [shake, setShake] = useState(false);
+  const [step, setStep] = useState(1);
+  const [selectedType, setSelectedType] = useState(null);
+  const [selectedQuick, setSelectedQuick] = useState([]);
+  const [selectedXrays, setSelectedXrays] = useState([]);
+  const [fields, setFields] = useState({});
+  const [freeText, setFreeText] = useState("");
+  const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function login(e) {
+    e.preventDefault();
+    if (pw === PASSWORD) { setAuthed(true); }
+    else { setPwError(true); setShake(true); setTimeout(() => setShake(false), 400); setTimeout(() => setPwError(false), 2000); setPw(""); }
+  }
+
+  function selectType(type) {
+    setSelectedType(type); setSelectedQuick([]); setSelectedXrays([]); setFields({}); setFreeText(""); setOutput(""); setStep(2);
+  }
+
+  function toggleQuick(opt) {
+    setSelectedQuick(prev => prev.find(o => o.key === opt.key) ? prev.filter(o => o.key !== opt.key) : [...prev, opt]);
+  }
+
+  function toggleXray(xr) {
+    setSelectedXrays(prev => prev.includes(xr) ? prev.filter(x => x !== xr) : [...prev, xr]);
+  }
+
+  function setField(key, val) {
+    setFields(prev => ({ ...prev, [key]: val }));
+  }
+
+  function buildPrompt() {
+    const type = NOTE_TYPES.find(t => t.id === selectedType);
+    let parts = ["Note type: " + type.label];
+    if (selectedQuick.length) parts.push("Visit details: " + selectedQuick.map(o => o.prompt).join(", "));
+    if (selectedXrays.length) parts.push("X-rays taken: " + selectedXrays.join(", "));
+    type.fields.forEach(f => { if (fields[f.key] && fields[f.key].trim()) parts.push(f.label + ": " + fields[f.key]); });
+    if (freeText.trim()) parts.push("Additional notes: " + freeText);
+    return parts.join("\n");
+  }
+
+  async function generate() {
+    setLoading(true); setOutput("");
+    try {
+      const res = await fetch("/api/notes-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: buildPrompt() }
+          ],
+          max_tokens: 1000,
+          temperature: 0.3,
+        }),
+      });
+      const data = await res.json();
+      const note = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : "Error generating note.";
+      setOutput(note);
+    } catch (e) {
+      setOutput("Error connecting. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  function reset() { setStep(1); setSelectedType(null); setSelectedQuick([]); setSelectedXrays([]); setFields({}); setFreeText(""); setOutput(""); }
+  function copyNote() { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+
+  const type = NOTE_TYPES.find(t => t.id === selectedType);
+
+  if (!authed) return (
+    React.createElement("div", { style: s.loginWrap },
+      React.createElement("style", null, "@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}"),
+      React.createElement("div", { style: Object.assign({}, s.loginBox, { animation: shake ? "shake 0.4s ease" : "none" }) },
+        React.createElement("div", { style: s.logo }, "QSD"),
+        React.createElement("div", { style: s.logoSub }, "Note Helper \u00B7 Staff Only"),
+        React.createElement("form", { onSubmit: login, style: s.loginForm },
+          React.createElement("input", { type: "password", value: pw, onChange: e => setPw(e.target.value), placeholder: "Password", autoFocus: true,
+            style: Object.assign({}, s.pwInput, { borderColor: pwError ? "#ff4d4d" : "#2a2a3a" }) }),
+          pwError && React.createElement("div", { style: s.pwErr }, "Incorrect password"),
+          React.createElement("button", { type: "submit", style: s.loginBtn }, "Enter \u2192")
+        )
+      )
+    )
+  );
+
+  return (
+    <div style={s.app}>
+      <style>{`
+        textarea,input{font-family:inherit;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .chip:hover{opacity:0.85;transform:translateY(-1px);}
+        .typebtn:hover{border-color:#3a3a5a!important;background:#12121f!important;}
+        .backbtn:hover{opacity:0.7;}
+      `}</style>
+
+      <div style={s.header}>
+        <div style={s.headerLeft}>
+          <span style={s.logo2}>QSD</span>
+          <span style={s.headerSub}>Note Helper</span>
+          {step > 1 && <span style={s.breadcrumb}>{"\u203A"} {type && type.label}</span>}
+        </div>
+        {step > 1 && <button onClick={reset} className="backbtn" style={s.backBtn}>{"\u2190"} New Note</button>}
+      </div>
+
+      <div style={s.content}>
+
+        {step === 1 && (
+          <div style={s.step1Wrap}>
+            <div style={s.stepHeading}>What are you documenting?</div>
+            <div style={s.typeGrid}>
+              {NOTE_TYPES.map(t => (
+                <button key={t.id} className="typebtn" onClick={() => selectType(t.id)} style={s.typeBtn}>
+                  <span style={{ fontSize: 28 }}>{t.icon}</span>
+                  <span style={s.typeBtnLabel}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && type && (
+          <div style={Object.assign({}, s.stepWrap, { animation: "fadeUp 0.2s ease" })}>
+            <div style={s.stepHeading}>Select all that apply</div>
+            <div style={s.chipRow}>
+              {type.quickOptions.map(opt => {
+                const active = selectedQuick.find(o => o.key === opt.key);
+                return (
+                  <button key={opt.key} className="chip" onClick={() => toggleQuick(opt)}
+                    style={Object.assign({}, s.chip, active ? s.chipActive : {})}>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedType === "exam" && (
+              <>
+                <div style={s.subHeading}>X-rays taken</div>
+                <div style={s.chipRow}>
+                  {type.xrayOptions.map(xr => (
+                    <button key={xr} className="chip" onClick={() => toggleXray(xr)}
+                      style={Object.assign({}, s.chip, selectedXrays.includes(xr) ? s.chipActive : {})}>
+                      {xr}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <button onClick={() => setStep(3)} style={s.nextBtn}>{"Next \u2192 Add details"}</button>
+          </div>
+        )}
+
+        {step === 3 && type && (
+          <div style={Object.assign({}, s.step3Wrap, { animation: "fadeUp 0.2s ease" })}>
+            <div style={s.fieldsCol}>
+              <div style={s.stepHeading}>Details</div>
+              <div style={s.selectedChips}>
+                {selectedQuick.map(o => <span key={o.key} style={s.miniChip}>{o.label}</span>)}
+                {selectedXrays.map(x => <span key={x} style={s.miniChip}>{x}</span>)}
+              </div>
+              {type.fields.map(f => (
+                <div key={f.key} style={s.fieldGroup}>
+                  <label style={s.fieldLabel}>{f.label}</label>
+                  <textarea rows={2} value={fields[f.key] || ""} onChange={e => setField(f.key, e.target.value)}
+                    placeholder={f.placeholder} style={s.fieldInput} />
+                </div>
+              ))}
+              <div style={s.fieldGroup}>
+                <label style={s.fieldLabel}>Anything else to add?</label>
+                <textarea rows={3} value={freeText} onChange={e => setFreeText(e.target.value)}
+                  placeholder="Any extra context, outcomes, referrals, patient reactions..." style={s.fieldInput} />
+              </div>
+              <button onClick={generate} disabled={loading} style={Object.assign({}, s.genBtn, { opacity: loading ? 0.6 : 1 })}>
+                {loading ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><span style={s.spinner} /> Generating...</span> : "Generate Note \u2192"}
+              </button>
+            </div>
+
+            <div style={s.outputCol}>
+              <div style={s.outputHeader}>
+                <span style={s.outputLabel}>CHART NOTE</span>
+                {output && <button onClick={copyNote} style={s.copyBtn}>{copied ? "\u2713 Copied!" : "Copy"}</button>}
+              </div>
+              <div style={s.outputBox}>
+                {loading && <div style={s.loadingInner}><div style={{ display: "flex", gap: 6 }}>{[0,1,2].map(i => <span key={i} style={Object.assign({}, s.dot, { animationDelay: (i*0.15) + "s" })} />)}</div><div style={s.loadingTxt}>Writing your note...</div></div>}
+                {!loading && !output && <div style={s.emptyOut}>Note will appear here</div>}
+                {!loading && output && <pre style={s.noteText}>{output}</pre>}
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+const s = {
+  loginWrap: { minHeight: "100vh", background: "#08080f", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" },
+  loginBox: { background: "#0f0f1a", border: "1px solid #1e1e30", borderRadius: 16, padding: "44px 40px", width: 320, textAlign: "center" },
+  logo: { fontSize: 30, fontWeight: 900, color: "#fff", letterSpacing: 6, fontFamily: "Georgia, serif", marginBottom: 6 },
+  logoSub: { fontSize: 11, color: "#444", letterSpacing: 2, textTransform: "uppercase", marginBottom: 28 },
+  loginForm: { display: "flex", flexDirection: "column", gap: 10 },
+  pwInput: { background: "#0a0a14", border: "1px solid", borderRadius: 8, padding: "11px 14px", color: "#ccc", fontSize: 14, outline: "none", fontFamily: "'Courier New', monospace" },
+  pwErr: { color: "#ff4d4d", fontSize: 12 },
+  loginBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "11px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: 1, fontFamily: "'Courier New', monospace", marginTop: 4 },
+  app: { minHeight: "100vh", background: "#08080f", color: "#ccc", fontFamily: "'Courier New', monospace", display: "flex", flexDirection: "column" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid #111", background: "#0a0a10" },
+  headerLeft: { display: "flex", alignItems: "center", gap: 12 },
+  logo2: { fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: 5, fontFamily: "Georgia, serif" },
+  headerSub: { fontSize: 11, color: "#333", letterSpacing: 2, textTransform: "uppercase" },
+  breadcrumb: { fontSize: 11, color: "#2D7DD2", letterSpacing: 1 },
+  backBtn: { background: "transparent", border: "1px solid #1e1e30", borderRadius: 6, color: "#555", fontSize: 11, padding: "5px 12px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, transition: "opacity 0.15s" },
+  content: { flex: 1, padding: "32px 28px", maxWidth: 1100, width: "100%", margin: "0 auto" },
+  step1Wrap: { animation: "fadeUp 0.2s ease" },
+  stepHeading: { fontSize: 13, color: "#555", letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 },
+  typeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 },
+  typeBtn: { background: "#0f0f1a", border: "1px solid #1a1a2a", borderRadius: 12, padding: "20px 16px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, transition: "all 0.15s", color: "#fff" },
+  typeBtnLabel: { fontSize: 12, color: "#888", fontFamily: "'Courier New', monospace", letterSpacing: 0.5 },
+  stepWrap: { maxWidth: 620 },
+  chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 },
+  chip: { background: "#0f0f1a", border: "1px solid #1e1e30", borderRadius: 20, padding: "7px 16px", fontSize: 12, color: "#666", cursor: "pointer", fontFamily: "'Courier New', monospace", transition: "all 0.15s", letterSpacing: 0.3 },
+  chipActive: { background: "#1a2a3a", border: "1px solid #2D7DD2", color: "#5ab3ff" },
+  subHeading: { fontSize: 11, color: "#333", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 },
+  nextBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "10px 28px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, marginTop: 8 },
+  step3Wrap: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, height: "calc(100vh - 120px)" },
+  fieldsCol: { overflowY: "auto", paddingRight: 12, display: "flex", flexDirection: "column", gap: 0 },
+  selectedChips: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 },
+  miniChip: { background: "#1a2a1a", border: "1px solid #2a3a2a", borderRadius: 10, padding: "3px 10px", fontSize: 10, color: "#3BB273" },
+  fieldGroup: { marginBottom: 14 },
+  fieldLabel: { display: "block", fontSize: 10, color: "#333", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 },
+  fieldInput: { width: "100%", background: "#0a0a14", border: "1px solid #1a1a2a", borderRadius: 8, padding: "10px 12px", color: "#ccc", fontSize: 12, outline: "none", lineHeight: 1.6, resize: "vertical" },
+  genBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "11px 24px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, marginTop: 8, width: "100%", transition: "opacity 0.15s" },
+  spinner: { width: 13, height: 13, border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" },
+  outputCol: { display: "flex", flexDirection: "column" },
+  outputHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  outputLabel: { fontSize: 10, color: "#333", letterSpacing: 3, textTransform: "uppercase" },
+  copyBtn: { background: "#0f1a0f", border: "1px solid #1a3a1a", borderRadius: 6, color: "#3BB273", fontSize: 11, padding: "4px 14px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1 },
+  outputBox: { flex: 1, background: "#0a0a12", border: "1px solid #111", borderRadius: 10, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column" },
+  loadingInner: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 },
+  dot: { width: 8, height: 8, borderRadius: "50%", background: "#2D7DD2", display: "inline-block", animation: "spin 1s ease infinite" },
+  loadingTxt: { fontSize: 12, color: "#333" },
+  emptyOut: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#222", fontSize: 13 },
+  noteText: { color: "#bbb", fontSize: 12.5, lineHeight: 1.9, fontFamily: "'Courier New', monospace", whiteSpace: "pre-wrap", animation: "fadeUp 0.25s ease" },
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(NoteHelper));
+  </script>
+</body>
+</html>
