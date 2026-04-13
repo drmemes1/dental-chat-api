@@ -157,6 +157,7 @@ const NOTE_TYPES = [
 ];
 
 function NoteHelper() {
+  const [dark, setDark] = useState(true);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
@@ -239,7 +240,102 @@ function NoteHelper() {
   function reset() { setStep(1); setSelectedType(null); setSelectedQuick([]); setSelectedXrays([]); setFields({}); setFreeText(""); setOutput(""); }
   function copyNote() { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); }
 
-  const type = NOTE_TYPES.find(t => t.id === selectedType);
+  const type = NOTE_TYPES.find(nt => nt.id === selectedType);
+
+  const t = dark ? {
+    bg: "#08080f", bg2: "#09090e", bg3: "#0b0b15", bg4: "#090910",
+    border: "#0e0e18", border2: "#131320", border3: "#141420", border4: "#181826",
+    text: "#ccc", textDim: "#666", textFaint: "#333", textVfaint: "#1e1e2a",
+    accent: "#2060b0", accentText: "#4a90d0", accentBg: "#0e1826", accentBorder: "#2060a0",
+    green: "#3a8050", greenBg: "#0a160e", greenBorder: "#1a4028",
+    chip: "#0c0c18", chipText: "#484860",
+    note: "#a8a8bc", header: "#09090e", logo: "#ddd",
+    input: "#090910", inputText: "#aaa",
+    btn: "#1a5090", btnText: "#cce",
+    tag: "#0e1826", tagText: "#3a6090",
+  } : {
+    bg: "#f4f4f0", bg2: "#ffffff", bg3: "#fafaf7", bg4: "#f8f8f5",
+    border: "#e0e0d8", border2: "#ddddd5", border3: "#e4e4dc", border4: "#d8d8d0",
+    text: "#1a1a1a", textDim: "#555", textFaint: "#888", textVfaint: "#bbb",
+    accent: "#1a5090", accentText: "#1a5090", accentBg: "#e8f0fa", accentBorder: "#90b8e0",
+    green: "#2a7040", greenBg: "#eaf4ee", greenBorder: "#90c8a0",
+    chip: "#f0f0ec", chipText: "#555566",
+    note: "#1a1a2a", header: "#ffffff", logo: "#1a1a1a",
+    input: "#ffffff", inputText: "#222",
+    btn: "#1a5090", btnText: "#ffffff",
+    tag: "#e8f0fa", tagText: "#2a5080",
+  };
+
+  const s = {
+    loginWrap: { minHeight: "100vh", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" },
+    loginBox: { background: t.bg2, border: `1px solid ${t.border}`, borderRadius: 14, padding: "42px 38px", width: 310, textAlign: "center" },
+    logo: { fontSize: 28, fontWeight: 900, color: t.logo, letterSpacing: 7, fontFamily: "Georgia, serif", marginBottom: 5 },
+    logoSub: { fontSize: 10, color: t.textFaint, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 26 },
+    loginForm: { display: "flex", flexDirection: "column", gap: 10 },
+    pwInput: { background: t.input, border: `1px solid ${t.border2}`, borderRadius: 7, padding: "10px 13px", color: t.inputText, fontSize: 13, outline: "none", fontFamily: "'Courier New', monospace" },
+    pwErr: { color: "#e04040", fontSize: 11 },
+    loginBtn: { background: t.btn, border: "none", borderRadius: 7, padding: "11px", color: t.btnText, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 1.5, fontFamily: "'Courier New', monospace", marginTop: 4 },
+
+    app: { minHeight: "100vh", background: t.bg, color: t.text, fontFamily: "'Courier New', monospace", display: "flex", flexDirection: "column" },
+    header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 22px", borderBottom: `1px solid ${t.border}`, background: t.header, gap: 10, flexWrap: "wrap" },
+    headerLeft: { display: "flex", alignItems: "center", gap: 10 },
+    headerRight: { display: "flex", alignItems: "center", gap: 12 },
+    logo2: { fontSize: 15, fontWeight: 900, color: t.logo, letterSpacing: 5, fontFamily: "Georgia, serif" },
+    headerDivider: { color: t.border2, fontSize: 13 },
+    headerSub: { fontSize: 10, color: t.textFaint, letterSpacing: 2.5, textTransform: "uppercase" },
+    breadcrumb: { fontSize: 11, color: t.accentText },
+    providerWrap: { display: "flex", alignItems: "center", gap: 7 },
+    providerLabel: { fontSize: 9.5, color: t.textFaint, letterSpacing: 2, textTransform: "uppercase" },
+    providerSelect: { background: t.bg3, border: `1px solid ${t.border2}`, borderRadius: 5, color: t.textDim, fontSize: 11, padding: "4px 9px", cursor: "pointer", outline: "none", fontFamily: "'Courier New', monospace" },
+    themeBtn: { background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 5, color: t.textDim, fontSize: 11, padding: "4px 10px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 0.5 },
+    backBtn: { background: "transparent", border: `1px solid ${t.border2}`, borderRadius: 5, color: t.textDim, fontSize: 10.5, padding: "4px 11px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, transition: "opacity 0.15s" },
+
+    content: { flex: 1, padding: "24px 22px", maxWidth: 1240, width: "100%", margin: "0 auto" },
+    step1Wrap: { animation: "fadeUp 0.2s ease" },
+    stepHeading: { fontSize: 10, color: t.textFaint, letterSpacing: 3.5, textTransform: "uppercase", marginBottom: 18 },
+    typeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 },
+    typeBtn: { background: t.bg3, border: `1px solid ${t.border2}`, borderRadius: 10, padding: "16px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, transition: "all 0.12s", color: t.text },
+    typeBtnLabel: { fontSize: 10.5, color: t.textDim, fontFamily: "'Courier New', monospace", letterSpacing: 0.5, textAlign: "center", lineHeight: 1.4 },
+    fwBadge: { fontSize: 8.5, color: t.textFaint, background: t.bg4, border: `1px solid ${t.border3}`, borderRadius: 6, padding: "2px 6px", letterSpacing: 0.3 },
+
+    stepWrap: { maxWidth: 700 },
+    chipRow: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 },
+    chip: { background: t.chip, border: `1px solid ${t.border3}`, borderRadius: 18, padding: "6px 13px", fontSize: 11, color: t.chipText, cursor: "pointer", fontFamily: "'Courier New', monospace", transition: "all 0.12s", letterSpacing: 0.2 },
+    chipActive: { background: t.accentBg, border: `1px solid ${t.accentBorder}`, color: t.accentText },
+    chipBlue: { background: t.accentBg, border: `1px solid ${t.accentBorder}`, color: t.accentText },
+    chipGreen: { background: t.greenBg, border: `1px solid ${t.greenBorder}`, color: t.green },
+    subHeading: { fontSize: 9.5, color: t.textFaint, letterSpacing: 3, textTransform: "uppercase", marginBottom: 9 },
+    nextBtn: { background: t.btn, border: "none", borderRadius: 7, padding: "10px 26px", color: t.btnText, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, marginTop: 10 },
+
+    step3Wrap: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, height: "calc(100vh - 98px)" },
+    fieldsCol: { overflowY: "auto", paddingRight: 6, display: "flex", flexDirection: "column", gap: 0 },
+    fwHint: { fontSize: 11, color: t.textFaint, lineHeight: 1.75, marginBottom: 12 },
+    selectedChips: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 },
+    miniChip: { background: t.greenBg, border: `1px solid ${t.greenBorder}`, borderRadius: 8, padding: "2px 8px", fontSize: 9, color: t.green },
+    tagRow: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 },
+    tag: { background: t.tag, border: `1px solid ${t.accentBorder}`, borderRadius: 8, padding: "2px 8px", fontSize: 9, color: t.tagText },
+    tagBlue: { background: t.accentBg, border: `1px solid ${t.accentBorder}`, color: t.accentText },
+    tagGreen: { background: t.greenBg, border: `1px solid ${t.greenBorder}`, color: t.green },
+    fieldGroup: { marginBottom: 11 },
+    fieldLabel: { display: "block", fontSize: 9, color: t.textFaint, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 5 },
+    fieldInput: { width: "100%", background: t.input, border: `1px solid ${t.border3}`, borderRadius: 6, padding: "8px 10px", color: t.inputText, fontSize: 11.5, lineHeight: 1.65, resize: "vertical", transition: "border-color 0.15s" },
+    signoffRow: { display: "flex", alignItems: "center", gap: 8, marginTop: 10, marginBottom: 9 },
+    signoffLabel: { fontSize: 9.5, color: t.textFaint, letterSpacing: 1.5 },
+    signoffName: { fontSize: 11.5, color: t.accentText, fontWeight: 700 },
+    genBtn: { background: t.btn, border: "none", borderRadius: 7, padding: "12px", color: t.btnText, fontSize: 12, fontWeight: 700, fontFamily: "'Courier New', monospace", letterSpacing: 1, width: "100%", transition: "opacity 0.15s", marginTop: 2 },
+    spinner: { width: 12, height: 12, border: "2px solid rgba(100,140,200,0.2)", borderTopColor: t.accentText, borderRadius: "50%", display: "inline-block", animation: "spin 0.75s linear infinite" },
+
+    outputCol: { display: "flex", flexDirection: "column", minHeight: 0 },
+    outputHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9, flexShrink: 0 },
+    outputLabel: { fontSize: 9.5, color: t.textFaint, letterSpacing: 3.5, textTransform: "uppercase" },
+    copyBtn: { background: t.greenBg, border: `1px solid ${t.greenBorder}`, borderRadius: 5, color: t.green, fontSize: 10.5, padding: "4px 13px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 0.5 },
+    outputBox: { flex: 1, background: t.bg4, border: `1px solid ${t.border}`, borderRadius: 9, padding: 18, overflowY: "auto", display: "flex", flexDirection: "column" },
+    loadingInner: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 },
+    dot: { width: 8, height: 8, borderRadius: "50%", background: t.accent, display: "inline-block", animation: "spin 1s ease infinite" },
+    loadingTxt: { fontSize: 10.5, color: t.textVfaint },
+    emptyOut: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: t.textVfaint, fontSize: 13 },
+    noteText: { color: t.note, fontSize: 12, lineHeight: 2.05, fontFamily: "'Courier New', monospace", whiteSpace: "pre-wrap", animation: "fadeUp 0.2s ease" },
+  };
 
   if (!authed) return (
     React.createElement("div", { style: s.loginWrap },
@@ -260,12 +356,20 @@ function NoteHelper() {
   return (
     <div style={s.app}>
       <style>{`
-        textarea,input{font-family:inherit;}
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:${t.bg};}
+        textarea,input,select{font-family:inherit;}
+        ::-webkit-scrollbar{width:4px;}
+        ::-webkit-scrollbar-thumb{background:${t.border2};border-radius:2px;}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .chip:hover{opacity:0.85;transform:translateY(-1px);}
-        .typebtn:hover{border-color:#3a3a5a!important;background:#12121f!important;}
-        .backbtn:hover{opacity:0.7;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+        .chip:hover{opacity:0.75;transform:translateY(-1px);}
+        .typebtn:hover{opacity:0.8;}
+        .backbtn:hover{opacity:0.55;}
+        .genbtn:hover:not(:disabled){opacity:0.85;}
+        select option{background:${t.bg3};}
+        textarea:focus,input:focus{outline:none;}
       `}</style>
 
       <div style={s.header}>
@@ -274,7 +378,12 @@ function NoteHelper() {
           <span style={s.headerSub}>Note Helper</span>
           {step > 1 && <span style={s.breadcrumb}>{"\u203A"} {type && type.label}</span>}
         </div>
-        {step > 1 && <button onClick={reset} className="backbtn" style={s.backBtn}>{"\u2190"} New Note</button>}
+        <div style={s.headerRight}>
+          <button onClick={() => setDark(d => !d)} style={s.themeBtn}>
+            {dark ? "☀️ Light" : "🌙 Dark"}
+          </button>
+          {step > 1 && <button onClick={reset} className="backbtn" style={s.backBtn}>{"\u2190"} New Note</button>}
+        </div>
       </div>
 
       <div style={s.content}>
@@ -283,10 +392,10 @@ function NoteHelper() {
           <div style={s.step1Wrap}>
             <div style={s.stepHeading}>What are you documenting?</div>
             <div style={s.typeGrid}>
-              {NOTE_TYPES.map(t => (
-                <button key={t.id} className="typebtn" onClick={() => selectType(t.id)} style={s.typeBtn}>
-                  <span style={{ fontSize: 28 }}>{t.icon}</span>
-                  <span style={s.typeBtnLabel}>{t.label}</span>
+              {NOTE_TYPES.map(nt => (
+                <button key={nt.id} className="typebtn" onClick={() => selectType(nt.id)} style={s.typeBtn}>
+                  <span style={{ fontSize: 28 }}>{nt.icon}</span>
+                  <span style={s.typeBtnLabel}>{nt.label}</span>
                 </button>
               ))}
             </div>
@@ -368,54 +477,6 @@ function NoteHelper() {
   );
 }
 
-const s = {
-  loginWrap: { minHeight: "100vh", background: "#08080f", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Courier New', monospace" },
-  loginBox: { background: "#0f0f1a", border: "1px solid #1e1e30", borderRadius: 16, padding: "44px 40px", width: 320, textAlign: "center" },
-  logo: { fontSize: 30, fontWeight: 900, color: "#fff", letterSpacing: 6, fontFamily: "Georgia, serif", marginBottom: 6 },
-  logoSub: { fontSize: 11, color: "#444", letterSpacing: 2, textTransform: "uppercase", marginBottom: 28 },
-  loginForm: { display: "flex", flexDirection: "column", gap: 10 },
-  pwInput: { background: "#0a0a14", border: "1px solid", borderRadius: 8, padding: "11px 14px", color: "#ccc", fontSize: 14, outline: "none", fontFamily: "'Courier New', monospace" },
-  pwErr: { color: "#ff4d4d", fontSize: 12 },
-  loginBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "11px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: 1, fontFamily: "'Courier New', monospace", marginTop: 4 },
-  app: { minHeight: "100vh", background: "#08080f", color: "#ccc", fontFamily: "'Courier New', monospace", display: "flex", flexDirection: "column" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid #111", background: "#0a0a10" },
-  headerLeft: { display: "flex", alignItems: "center", gap: 12 },
-  logo2: { fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: 5, fontFamily: "Georgia, serif" },
-  headerSub: { fontSize: 11, color: "#333", letterSpacing: 2, textTransform: "uppercase" },
-  breadcrumb: { fontSize: 11, color: "#2D7DD2", letterSpacing: 1 },
-  backBtn: { background: "transparent", border: "1px solid #1e1e30", borderRadius: 6, color: "#555", fontSize: 11, padding: "5px 12px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, transition: "opacity 0.15s" },
-  content: { flex: 1, padding: "32px 28px", maxWidth: 1100, width: "100%", margin: "0 auto" },
-  step1Wrap: { animation: "fadeUp 0.2s ease" },
-  stepHeading: { fontSize: 13, color: "#555", letterSpacing: 2, textTransform: "uppercase", marginBottom: 20 },
-  typeGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 },
-  typeBtn: { background: "#0f0f1a", border: "1px solid #1a1a2a", borderRadius: 12, padding: "20px 16px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, transition: "all 0.15s", color: "#fff" },
-  typeBtnLabel: { fontSize: 12, color: "#888", fontFamily: "'Courier New', monospace", letterSpacing: 0.5 },
-  stepWrap: { maxWidth: 620 },
-  chipRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 },
-  chip: { background: "#0f0f1a", border: "1px solid #1e1e30", borderRadius: 20, padding: "7px 16px", fontSize: 12, color: "#666", cursor: "pointer", fontFamily: "'Courier New', monospace", transition: "all 0.15s", letterSpacing: 0.3 },
-  chipActive: { background: "#1a2a3a", border: "1px solid #2D7DD2", color: "#5ab3ff" },
-  subHeading: { fontSize: 11, color: "#333", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 },
-  nextBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "10px 28px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, marginTop: 8 },
-  step3Wrap: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, height: "calc(100vh - 120px)" },
-  fieldsCol: { overflowY: "auto", paddingRight: 12, display: "flex", flexDirection: "column", gap: 0 },
-  selectedChips: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 },
-  miniChip: { background: "#1a2a1a", border: "1px solid #2a3a2a", borderRadius: 10, padding: "3px 10px", fontSize: 10, color: "#3BB273" },
-  fieldGroup: { marginBottom: 14 },
-  fieldLabel: { display: "block", fontSize: 10, color: "#333", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 },
-  fieldInput: { width: "100%", background: "#0a0a14", border: "1px solid #1a1a2a", borderRadius: 8, padding: "10px 12px", color: "#ccc", fontSize: 12, outline: "none", lineHeight: 1.6, resize: "vertical" },
-  genBtn: { background: "#2D7DD2", border: "none", borderRadius: 8, padding: "11px 24px", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, marginTop: 8, width: "100%", transition: "opacity 0.15s" },
-  spinner: { width: 13, height: 13, border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" },
-  outputCol: { display: "flex", flexDirection: "column" },
-  outputHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  outputLabel: { fontSize: 10, color: "#333", letterSpacing: 3, textTransform: "uppercase" },
-  copyBtn: { background: "#0f1a0f", border: "1px solid #1a3a1a", borderRadius: 6, color: "#3BB273", fontSize: 11, padding: "4px 14px", cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1 },
-  outputBox: { flex: 1, background: "#0a0a12", border: "1px solid #111", borderRadius: 10, padding: 20, overflowY: "auto", display: "flex", flexDirection: "column" },
-  loadingInner: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 },
-  dot: { width: 8, height: 8, borderRadius: "50%", background: "#2D7DD2", display: "inline-block", animation: "spin 1s ease infinite" },
-  loadingTxt: { fontSize: 12, color: "#333" },
-  emptyOut: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#222", fontSize: 13 },
-  noteText: { color: "#bbb", fontSize: 12.5, lineHeight: 1.9, fontFamily: "'Courier New', monospace", whiteSpace: "pre-wrap", animation: "fadeUp 0.25s ease" },
-};
 
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(NoteHelper));
   </script>
