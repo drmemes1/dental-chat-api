@@ -50,6 +50,7 @@ const NOTE_TYPES = [
     ],
     fields: [
       { key: "teeth", label: "Tooth # and surfaces", placeholder: "e.g. #19 MOD, #3 DO, #14 O" },
+      { key: "anesthetic", label: "Anesthetic", placeholder: "e.g. 2 carpules 4% Orabloc buccal + lingual (or 'none')" },
       { key: "shade", label: "Composite shade", placeholder: "A2 (default if blank)" },
       { key: "notes", label: "Additional notes", placeholder: "e.g. decay deeper than expected, pt tolerated well" },
     ]
@@ -66,6 +67,7 @@ const NOTE_TYPES = [
     ],
     fields: [
       { key: "teeth", label: "Tooth #(s)", placeholder: "e.g. #30, #15" },
+      { key: "anesthetic", label: "Anesthetic", placeholder: "e.g. 2 carpules 4% Orabloc buccal + PDL" },
       { key: "shade", label: "Shade", placeholder: "e.g. A2, B1, 2M2" },
       { key: "lab", label: "Lab (if known)", placeholder: "e.g. Creodent, in-house" },
       { key: "notes", label: "Additional notes", placeholder: "e.g. scanned with iTero, temp placed, pt happy with shade" },
@@ -83,6 +85,7 @@ const NOTE_TYPES = [
     ],
     fields: [
       { key: "tooth", label: "Tooth #", placeholder: "e.g. #19" },
+      { key: "anesthetic", label: "Anesthetic", placeholder: "e.g. 2 carpules 4% Orabloc IAN + long buccal" },
       { key: "canals", label: "# of canals / canal names", placeholder: "e.g. 3 canals: MB, ML, D" },
       { key: "wl", label: "Working length", placeholder: "e.g. MB 19mm, ML 18mm, D 20mm" },
       { key: "notes", label: "Additional notes", placeholder: "e.g. calcified MB2, temp placed, refer to Dr. Diana" },
@@ -117,6 +120,7 @@ const NOTE_TYPES = [
     ],
     fields: [
       { key: "site", label: "Implant site #", placeholder: "e.g. #19" },
+      { key: "anesthetic", label: "Anesthetic", placeholder: "e.g. 2 carpules 4% Orabloc buccal + palatal" },
       { key: "specs", label: "Implant specs / brand", placeholder: "e.g. 3.7x10 Biohorizon, torqued 35Ncm" },
       { key: "notes", label: "Additional notes", placeholder: "e.g. healing abutment placed, bone graft with allograft + membrane" },
     ]
@@ -158,6 +162,7 @@ const NOTE_TYPES = [
 
 function NoteHelper() {
   const [dark, setDark] = useState(true);
+  const [provider, setProvider] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
@@ -209,6 +214,7 @@ function NoteHelper() {
     if (selectedXrays.length) parts.push("X-rays taken: " + selectedXrays.join(", "));
     type.fields.forEach(f => { if (fields[f.key] && fields[f.key].trim()) parts.push(f.label + ": " + fields[f.key]); });
     if (freeText.trim()) parts.push("Additional notes: " + freeText);
+    if (provider.trim()) parts.push("Provider sign-off name: " + provider.trim());
     return parts.join("\n");
   }
 
@@ -379,6 +385,11 @@ function NoteHelper() {
           {step > 1 && <span style={s.breadcrumb}>{"\u203A"} {type && type.label}</span>}
         </div>
         <div style={s.headerRight}>
+          <div style={s.providerWrap}>
+            <span style={s.providerLabel}>Provider:</span>
+            <input type="text" value={provider} onChange={e => setProvider(e.target.value)}
+              placeholder="e.g. IK DDS" style={s.providerSelect} />
+          </div>
           <button onClick={() => setDark(d => !d)} style={s.themeBtn}>
             {dark ? "☀️ Light" : "🌙 Dark"}
           </button>
