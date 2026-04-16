@@ -502,11 +502,11 @@
   "use strict";
   var API = "https://dental-chat-api.vercel.app/api/chat";
   var PROMPT_URL = "https://dental-chat-api.vercel.app/quentin-bot-prompt.md";
-  var threadId = null;
   var isOpen = false;
   var sending = false;
   var focusTrap = [];
   var systemPrompt = "";
+  var chatHistory = [];
 
   fetch(PROMPT_URL)
     .then(function (res) { return res.text(); })
@@ -599,17 +599,19 @@
     send.disabled = true;
     input.value = "";
     addMsg(text, "user");
+    chatHistory.push({ role: "user", content: text });
     showTyping();
     try {
       var res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, threadId: threadId, systemPrompt: systemPrompt })
+        body: JSON.stringify({ system: systemPrompt, messages: chatHistory })
       });
       var data = await res.json();
       hideTyping();
-      if (data.threadId) threadId = data.threadId;
-      addMsg(data.response || "Sorry, something went wrong. Please call us at (718) 339-8852.", "bot");
+      var reply = data.response || "Sorry, something went wrong. Please call us at (718) 339-8852.";
+      chatHistory.push({ role: "assistant", content: reply });
+      addMsg(reply, "bot");
     } catch (err) {
       hideTyping();
       addMsg("I\u2019m having trouble connecting. Please call us at (718) 339-8852 for assistance.", "bot");
