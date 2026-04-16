@@ -501,10 +501,17 @@
 (function () {
   "use strict";
   var API = "https://dental-chat-api.vercel.app/api/chat";
+  var PROMPT_URL = "https://dental-chat-api.vercel.app/quentin-bot-prompt.md";
   var threadId = null;
   var isOpen = false;
   var sending = false;
   var focusTrap = [];
+  var systemPrompt = "";
+
+  fetch(PROMPT_URL)
+    .then(function (res) { return res.text(); })
+    .then(function (text) { systemPrompt = text; })
+    .catch(function () { systemPrompt = ""; });
 
   var $ = function (id) { return document.getElementById(id); };
   var toggle = $("qsd-toggle");
@@ -597,7 +604,7 @@
       var res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, threadId: threadId })
+        body: JSON.stringify({ message: text, threadId: threadId, systemPrompt: systemPrompt })
       });
       var data = await res.json();
       hideTyping();

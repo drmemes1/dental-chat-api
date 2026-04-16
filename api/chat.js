@@ -45,7 +45,7 @@ module.exports = async function handler(req, res) {
   });
 
   try {
-    const { message, threadId } = req.body;
+    const { message, threadId, systemPrompt } = req.body;
 
     if (!message) {
       res.status(400).json({ error: "Message is required" });
@@ -63,10 +63,12 @@ module.exports = async function handler(req, res) {
       content: message,
     });
 
-    // Create a run
-    const run = await openaiRequest("POST", `/threads/${thread.id}/runs`, {
-      assistant_id: process.env.ASSISTANT_ID,
-    });
+    // Create a run — pass instructions to override assistant's stored prompt
+    const runBody = { assistant_id: process.env.ASSISTANT_ID };
+    if (systemPrompt && systemPrompt.trim()) {
+      runBody.instructions = systemPrompt;
+    }
+    const run = await openaiRequest("POST", `/threads/${thread.id}/runs`, runBody);
 
     // Poll until complete
     let status = run.status;
