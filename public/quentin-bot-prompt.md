@@ -51,6 +51,8 @@ Closed Sunday, Monday, Thursday
 
 **Google Reviews:** 5.0 stars, 200+ reviews
 
+When someone asks if you are open tomorrow or today — you know what day it is. Just answer directly. Do not ask them what day tomorrow is. Use the hours to calculate the answer and respond confidently.
+
 **Languages spoken:** English, Russian, and conversational Spanish
 
 ---

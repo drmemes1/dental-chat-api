@@ -33,6 +33,9 @@ module.exports = async function handler(req, res) {
     console.log("Prompt length:", systemPrompt.length);
     console.log("Prompt preview:", systemPrompt.substring(0, 100));
 
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" });
+    const systemWithDate = systemPrompt + "\n\nToday is " + today + ". Use this to answer questions about whether the office is open today, tomorrow, or any specific day.";
+
     const { messages } = req.body;
     console.log("Messages received:", JSON.stringify(messages));
 
@@ -51,7 +54,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1024,
-        system: systemPrompt,
+        system: systemWithDate,
         messages,
       }),
     });
