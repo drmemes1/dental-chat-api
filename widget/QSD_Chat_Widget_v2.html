@@ -509,9 +509,18 @@
   var chatHistory = [];
 
   fetch(PROMPT_URL)
-    .then(function (res) { return res.text(); })
-    .then(function (text) { systemPrompt = text; })
-    .catch(function () { systemPrompt = ""; });
+    .then(function (res) {
+      if (!res.ok) throw new Error("Prompt fetch failed: " + res.status);
+      return res.text();
+    })
+    .then(function (text) {
+      systemPrompt = text;
+      console.log("QSD: System prompt loaded (" + text.length + " chars)");
+    })
+    .catch(function (err) {
+      console.error("QSD: Failed to load system prompt", err);
+      systemPrompt = "";
+    });
 
   var $ = function (id) { return document.getElementById(id); };
   var toggle = $("qsd-toggle");
