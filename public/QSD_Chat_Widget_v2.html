@@ -500,7 +500,7 @@
 <script>
 (function () {
   "use strict";
-  var API = "https://dental-chat-api.vercel.app/api/chat";
+  var API = "/api/chat";
   var isOpen = false;
   var sending = false;
   var focusTrap = [];
@@ -601,6 +601,7 @@
         body: JSON.stringify({ messages: chatHistory })
       });
       var data = await res.json();
+      console.log("QSD widget received:", JSON.stringify(data).substring(0, 300));
       hideTyping();
       var reply = data.response || "Sorry, something went wrong. Please call us at (718) 339-8852.";
       chatHistory.push({ role: "assistant", content: reply });
