@@ -84,28 +84,7 @@
     </ul>
   </div>
 
-  <!-- Load the widget -->
-  <script>
-    fetch('QSD_Chat_Widget_v2.html')
-      .then(r => r.text())
-      .then(html => {
-        var div = document.createElement('div');
-        div.innerHTML = html;
-        // Move styles to head
-        div.querySelectorAll('style').forEach(s => document.head.appendChild(s));
-        // Move non-script content to body
-        Array.from(div.children).forEach(child => {
-          if (child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
-            document.body.appendChild(child);
-          }
-        });
-        // Execute scripts
-        div.querySelectorAll('script').forEach(s => {
-          var ns = document.createElement('script');
-          ns.textContent = s.textContent;
-          document.body.appendChild(ns);
-        });
-      });
-  </script>
+  <!-- Load the widget via loader script (same as dental website embed) -->
+  <script src="https://dental-chat-api.vercel.app/widget-loader.js"></script>
 </body>
 </html>
