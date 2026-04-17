@@ -1,0 +1,635 @@
+<!-- QSD Chat Widget v2 — Quentin Smile Dental -->
+<!-- Embed: Copy this entire file contents into your WordPress HTML block or theme footer -->
+<style>
+  .qsd-widget *,
+  .qsd-widget *::before,
+  .qsd-widget *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  .qsd-widget {
+    --teal: #1E8A8A;
+    --navy: #1B3A5F;
+    --grad: linear-gradient(135deg, #1E8A8A 0%, #1B3A5F 100%);
+    --bg: #FAFAFA;
+    --white: #FFFFFF;
+    --border: #E5E5E5;
+    --input-border: #E0E0E0;
+    --text: #1F2937;
+    --text-light: #999;
+    --disclaimer-bg: #FFF8E1;
+    --focus: #FFD60A;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999;
+  }
+
+  /* ── Skip Link ─────────────────────────────────── */
+  .qsd-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--navy);
+    color: var(--white);
+    padding: 8px 16px;
+    border-radius: 0 0 8px 0;
+    z-index: 100001;
+    font-size: 13px;
+  }
+  .qsd-skip-link:focus {
+    left: 0;
+  }
+
+  /* ── Toggle Buttons ────────────────────────────── */
+  .qsd-call-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 28px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 4px 16px rgba(27, 58, 95, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .qsd-call-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(27, 58, 95, 0.45);
+  }
+  .qsd-call-btn:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .qsd-call-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--white);
+  }
+
+  .qsd-toggle {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    border: none;
+    background: var(--grad);
+    color: var(--white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(30, 138, 138, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+  }
+  .qsd-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 24px rgba(30, 138, 138, 0.5);
+  }
+  .qsd-toggle:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .qsd-toggle svg {
+    width: 28px;
+    height: 28px;
+    fill: var(--white);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .qsd-toggle .qsd-icon-close {
+    position: absolute;
+    opacity: 0;
+    transform: rotate(-90deg);
+  }
+  .qsd-toggle[aria-expanded="true"] .qsd-icon-chat {
+    opacity: 0;
+    transform: rotate(90deg);
+  }
+  .qsd-toggle[aria-expanded="true"] .qsd-icon-close {
+    opacity: 1;
+    transform: rotate(0);
+  }
+
+  /* ── Chat Window ───────────────────────────────── */
+  .qsd-window {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 380px;
+    height: 520px;
+    border-radius: 20px;
+    background: var(--bg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 100000;
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  .qsd-window.qsd-open {
+    display: flex;
+    animation: qsd-slide-up 0.25s ease-out forwards;
+  }
+  .qsd-window.qsd-closing {
+    animation: qsd-slide-down 0.2s ease-in forwards;
+  }
+
+  @keyframes qsd-slide-up {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes qsd-slide-down {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(12px); }
+  }
+
+  /* ── Header ────────────────────────────────────── */
+  .qsd-header {
+    background: var(--grad);
+    height: 70px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .qsd-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .qsd-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .qsd-header-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .qsd-header-title {
+    color: var(--white);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .qsd-header-sub {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .qsd-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    color: var(--white);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+  .qsd-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .qsd-close:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ── Messages ──────────────────────────────────── */
+  .qsd-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scroll-behavior: smooth;
+  }
+  .qsd-messages::-webkit-scrollbar {
+    width: 4px;
+  }
+  .qsd-messages::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+
+  .qsd-msg {
+    max-width: 80%;
+    animation: qsd-fade-in 0.15s ease-out;
+  }
+  .qsd-msg-bot {
+    align-self: flex-start;
+  }
+  .qsd-msg-user {
+    align-self: flex-end;
+  }
+
+  .qsd-bubble {
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .qsd-msg-bot .qsd-bubble {
+    background: var(--white);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px 18px 18px 18px;
+  }
+  .qsd-msg-user .qsd-bubble {
+    background: var(--grad);
+    color: var(--white);
+    border-radius: 18px 4px 18px 18px;
+  }
+
+  .qsd-time {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 2px;
+    padding: 0 4px;
+  }
+  .qsd-msg-bot .qsd-time {
+    text-align: left;
+  }
+  .qsd-msg-user .qsd-time {
+    text-align: right;
+  }
+
+  @keyframes qsd-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Typing Indicator ──────────────────────────── */
+  .qsd-typing {
+    align-self: flex-start;
+    display: none;
+  }
+  .qsd-typing.qsd-visible {
+    display: block;
+  }
+  .qsd-typing .qsd-bubble {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px 18px 18px 18px;
+    padding: 14px 20px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .qsd-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--teal);
+    border-radius: 50%;
+    animation: qsd-bounce 1.4s ease-in-out infinite;
+  }
+  .qsd-dot:nth-child(2) { animation-delay: 0.15s; }
+  .qsd-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes qsd-bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* ── Disclaimer ────────────────────────────────── */
+  .qsd-disclaimer {
+    background: var(--disclaimer-bg);
+    padding: 8px 16px;
+    text-align: center;
+    flex-shrink: 0;
+    border-top: 1px solid #F0E6C8;
+  }
+  .qsd-disclaimer p {
+    font-size: 11px;
+    color: #6B7280;
+    margin: 0;
+    line-height: 1.4;
+  }
+  .qsd-disclaimer a {
+    color: var(--teal);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .qsd-disclaimer a:hover {
+    text-decoration: underline;
+  }
+  .qsd-disclaimer a:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* ── Input ─────────────────────────────────────── */
+  .qsd-input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--white);
+    border-top: 1px solid #F0F0F0;
+    flex-shrink: 0;
+  }
+  .qsd-input {
+    flex: 1;
+    border: 1px solid var(--input-border);
+    border-radius: 24px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.2s ease;
+    line-height: 1.4;
+  }
+  .qsd-input::placeholder {
+    color: var(--text-light);
+  }
+  .qsd-input:focus {
+    border-color: var(--teal);
+  }
+  .qsd-input:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  .qsd-send {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--grad);
+    color: var(--white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(30, 138, 138, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .qsd-send:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(30, 138, 138, 0.4);
+  }
+  .qsd-send:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .qsd-send:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .qsd-send svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--white);
+  }
+
+  /* ── Mobile ────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .qsd-window {
+      width: 100vw;
+      height: 100vh;
+      bottom: 0;
+      right: 0;
+      border-radius: 0;
+    }
+    .qsd-call-btn {
+      bottom: 90px;
+      right: 12px;
+    }
+    .qsd-widget {
+      bottom: 12px;
+      right: 12px;
+    }
+  }
+
+  /* ── Reduced Motion ────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .qsd-window.qsd-open { animation: none; opacity: 1; transform: none; }
+    .qsd-window.qsd-closing { animation: none; }
+    .qsd-msg { animation: none; }
+    .qsd-dot { animation: none; }
+    .qsd-toggle svg { transition: none; }
+  }
+</style>
+
+<div class="qsd-widget" id="qsd-widget">
+  <a href="#qsd-input" class="qsd-skip-link">Skip to chat input</a>
+
+  <!-- Call Button -->
+  <a href="tel:+17183398852" class="qsd-call-btn" aria-label="Call Quentin Smile Dental at 718-339-8852">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.72 11.72 0 003.66.59 1 1 0 011 1v3.59a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.59a1 1 0 011 1 11.72 11.72 0 00.59 3.66 1 1 0 01-.24 1.01l-2.2 2.2z"/></svg>
+    Call (718) 339-8852
+  </a>
+
+  <!-- Toggle Button -->
+  <button class="qsd-toggle" id="qsd-toggle" aria-label="Open chat" aria-expanded="false" aria-controls="qsd-window">
+    <svg class="qsd-icon-chat" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M7 9h10v2H7zm0-3h10v2H7z"/></svg>
+    <svg class="qsd-icon-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+  </button>
+
+  <!-- Chat Window -->
+  <div class="qsd-window" id="qsd-window" role="dialog" aria-label="Chat with Quentin, Virtual Dental Assistant" aria-modal="true">
+    <div class="qsd-header">
+      <div class="qsd-avatar" aria-hidden="true"><img src="/qsd.png" alt="Quentin Smile Dental"></div>
+      <div class="qsd-header-text">
+        <div class="qsd-header-title">Quentin</div>
+        <div class="qsd-header-sub">Virtual Dental Assistant</div>
+      </div>
+      <button class="qsd-close" id="qsd-close" aria-label="Close chat">✕</button>
+    </div>
+
+    <div class="qsd-messages" id="qsd-messages" role="log" aria-live="polite" aria-label="Chat messages">
+    </div>
+
+    <div class="qsd-typing" id="qsd-typing" aria-label="Quentin is typing">
+      <div class="qsd-bubble">
+        <div class="qsd-dot"></div>
+        <div class="qsd-dot"></div>
+        <div class="qsd-dot"></div>
+      </div>
+    </div>
+
+    <div class="qsd-disclaimer">
+      <p>General info only — do not share personal health information.</p>
+      <p>Need help? <a href="tel:+17183398852">Call (718) 339-8852</a></p>
+    </div>
+
+    <div class="qsd-input-area">
+      <label for="qsd-input" class="qsd-skip-link">Type your message</label>
+      <input type="text" class="qsd-input" id="qsd-input" placeholder="Start a conversation..." autocomplete="off" aria-label="Type your message">
+      <button class="qsd-send" id="qsd-send" aria-label="Send message" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var API = "https://dental-chat-api.vercel.app/api/chat";
+  var PROMPT_URL = "https://dental-chat-api.vercel.app/quentin-bot-prompt.md";
+  var isOpen = false;
+  var sending = false;
+  var focusTrap = [];
+  var systemPrompt = "";
+  var chatHistory = [];
+
+  fetch(PROMPT_URL)
+    .then(function (res) { return res.text(); })
+    .then(function (text) { systemPrompt = text; })
+    .catch(function () { systemPrompt = ""; });
+
+  var $ = function (id) { return document.getElementById(id); };
+  var toggle = $("qsd-toggle");
+  var win = $("qsd-window");
+  var close = $("qsd-close");
+  var msgs = $("qsd-messages");
+  var input = $("qsd-input");
+  var send = $("qsd-send");
+  var typing = $("qsd-typing");
+
+  function timeStr() {
+    var d = new Date();
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return h + ":" + (m < 10 ? "0" : "") + m + " " + ap;
+  }
+
+  function addMsg(text, role) {
+    var wrap = document.createElement("div");
+    wrap.className = "qsd-msg qsd-msg-" + role;
+    var bubble = document.createElement("div");
+    bubble.className = "qsd-bubble";
+    bubble.textContent = text;
+    if (role === "bot") bubble.setAttribute("aria-label", "Quentin says: " + text);
+    var time = document.createElement("div");
+    time.className = "qsd-time";
+    time.textContent = timeStr();
+    time.setAttribute("aria-hidden", "true");
+    wrap.appendChild(bubble);
+    wrap.appendChild(time);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function showTyping() { typing.classList.add("qsd-visible"); msgs.scrollTop = msgs.scrollHeight; }
+  function hideTyping() { typing.classList.remove("qsd-visible"); }
+
+  function openChat() {
+    isOpen = true;
+    win.classList.remove("qsd-closing");
+    win.classList.add("qsd-open");
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "Close chat");
+    if (msgs.children.length === 0) {
+      addMsg("Hey! I\u2019m Quentin, your virtual assistant at Quentin Smile Dental. How can I help you today?", "bot");
+    }
+    setTimeout(function () { input.focus(); }, 300);
+    setupFocusTrap();
+  }
+
+  function closeChat() {
+    win.classList.add("qsd-closing");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Open chat");
+    setTimeout(function () {
+      win.classList.remove("qsd-open", "qsd-closing");
+      isOpen = false;
+      toggle.focus();
+    }, 200);
+  }
+
+  function setupFocusTrap() {
+    focusTrap = win.querySelectorAll("button, input, a, [tabindex]");
+  }
+
+  function trapFocus(e) {
+    if (!isOpen || focusTrap.length === 0) return;
+    var first = focusTrap[0];
+    var last = focusTrap[focusTrap.length - 1];
+    if (e.key === "Tab") {
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+
+  async function sendMsg() {
+    var text = input.value.trim();
+    if (!text || sending) return;
+    sending = true;
+    send.disabled = true;
+    input.value = "";
+    addMsg(text, "user");
+    chatHistory.push({ role: "user", content: text });
+    showTyping();
+    try {
+      var res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system: systemPrompt, messages: chatHistory })
+      });
+      var data = await res.json();
+      hideTyping();
+      var reply = data.response || "Sorry, something went wrong. Please call us at (718) 339-8852.";
+      chatHistory.push({ role: "assistant", content: reply });
+      addMsg(reply, "bot");
+    } catch (err) {
+      hideTyping();
+      addMsg("I\u2019m having trouble connecting. Please call us at (718) 339-8852 for assistance.", "bot");
+    }
+    sending = false;
+    send.disabled = !input.value.trim();
+    input.focus();
+  }
+
+  // Events
+  toggle.addEventListener("click", function () { isOpen ? closeChat() : openChat(); });
+  close.addEventListener("click", closeChat);
+  send.addEventListener("click", sendMsg);
+  input.addEventListener("keydown", function (e) { if (e.key === "Enter") sendMsg(); });
+  input.addEventListener("input", function () { send.disabled = !input.value.trim(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && isOpen) closeChat();
+    trapFocus(e);
+  });
+})();
+</script>

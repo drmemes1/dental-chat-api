@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quentin Smile Dental — Brooklyn, NY</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #FAFAFA;
+      color: #1F2937;
+      min-height: 100vh;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1E8A8A 0%, #1B3A5F 100%);
+      color: #fff;
+      padding: 60px 24px 80px;
+      text-align: center;
+    }
+    .hero-logo {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .hero-sub {
+      font-size: 16px;
+      opacity: 0.85;
+      margin-bottom: 32px;
+    }
+    .hero-tagline {
+      font-size: 22px;
+      font-weight: 600;
+      max-width: 520px;
+      margin: 0 auto 28px;
+      line-height: 1.5;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: #1B3A5F;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 32px;
+      border-radius: 32px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .hero-cta:hover { transform: scale(1.03); box-shadow: 0 6px 24px rgba(0,0,0,0.2); }
+    .hero-cta svg { width: 20px; height: 20px; fill: #1B3A5F; }
+
+    .info-bar {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 32px;
+      padding: 24px;
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+      color: #555;
+    }
+    .info-item { display: flex; align-items: center; gap: 8px; }
+    .info-item svg { width: 18px; height: 18px; fill: #1E8A8A; flex-shrink: 0; }
+    .info-item a { color: #1B3A5F; font-weight: 600; text-decoration: none; }
+    .info-item a:hover { text-decoration: underline; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 28px 24px;
+      text-align: center;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .card-icon { font-size: 32px; margin-bottom: 12px; }
+    .card-title { font-size: 17px; font-weight: 700; color: #1B3A5F; margin-bottom: 8px; }
+    .card-text { font-size: 14px; color: #666; line-height: 1.6; }
+
+    .tools-section {
+      background: #fff;
+      border-top: 1px solid #eee;
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .tools-heading {
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 24px;
+    }
+    .tools-grid {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .tool-link {
+      display: inline-block;
+      background: linear-gradient(135deg, #1E8A8A 0%, #1B3A5F 100%);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 12px 28px;
+      border-radius: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 10px rgba(30, 138, 138, 0.25);
+    }
+    .tool-link:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(30, 138, 138, 0.35); }
+
+    .footer {
+      text-align: center;
+      padding: 28px 24px;
+      font-size: 12px;
+      color: #aaa;
+      border-top: 1px solid #eee;
+    }
+
+    @media (max-width: 480px) {
+      .hero { padding: 40px 20px 60px; }
+      .hero-logo { font-size: 32px; }
+      .hero-tagline { font-size: 18px; }
+      .info-bar { gap: 16px; flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-logo">Quentin Smile Dental</div>
+    <div class="hero-sub">2148 Ocean Avenue, Suite 401 &middot; Brooklyn, NY 11229</div>
+    <div class="hero-tagline">Your neighborhood dental team. Comprehensive care with a personal touch.</div>
+    <a href="tel:+17183398852" class="hero-cta">
+      <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.72 11.72 0 003.66.59 1 1 0 011 1v3.59a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.59a1 1 0 011 1 11.72 11.72 0 00.59 3.66 1 1 0 01-.24 1.01l-2.2 2.2z"/></svg>
+      Call (718) 339-8852
+    </a>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-item">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 7a2.5 2.5 0 010 5z"/></svg>
+      2148 Ocean Ave, Suite 401, Brooklyn
+    </div>
+    <div class="info-item">
+      <svg viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.72 11.72 0 003.66.59 1 1 0 011 1v3.59a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.59a1 1 0 011 1 11.72 11.72 0 00.59 3.66 1 1 0 01-.24 1.01l-2.2 2.2z"/></svg>
+      <a href="tel:+17183398852">(718) 339-8852</a>
+    </div>
+    <div class="info-item">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      <a href="mailto:smile@dentistinbrooklyn.com">smile@dentistinbrooklyn.com</a>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🦷</div>
+      <div class="card-title">General & Preventive</div>
+      <div class="card-text">Exams, cleanings, digital x-rays, oral cancer screenings, sealants, and nightguards.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">👑</div>
+      <div class="card-title">Crowns & Restorations</div>
+      <div class="card-text">Tooth-colored fillings, porcelain crowns, bridges, inlays, onlays, and veneers.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔩</div>
+      <div class="card-title">Dental Implants</div>
+      <div class="card-text">Implant placement, bone grafting, sinus lifts, and full-mouth reconstruction.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">😁</div>
+      <div class="card-title">Cosmetic Dentistry</div>
+      <div class="card-text">KöR Whitening, Invisalign, porcelain veneers, and smile makeovers.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧹</div>
+      <div class="card-title">Perio & Gum Care</div>
+      <div class="card-text">Scaling and root planing, periodontal maintenance, Arestin therapy.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💉</div>
+      <div class="card-title">Botox & TMJ</div>
+      <div class="card-text">Botox and Xeomin for TMJ, bruxism, migraines, and cosmetic facial aesthetics.</div>
+    </div>
+  </div>
+
+  <div class="tools-section">
+    <div class="tools-heading">Staff Tools</div>
+    <div class="tools-grid">
+      <a href="/notes" class="tool-link">Note Helper</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2026 Quentin Smile Dental. All rights reserved.
+  </div>
+
+  <!-- Chatbot Widget -->
+  <script>
+    fetch("/QSD_Chat_Widget_v2.html")
+      .then(function(r) { return r.text(); })
+      .then(function(html) {
+        var div = document.createElement("div");
+        div.innerHTML = html;
+        document.body.appendChild(div);
+        var scripts = div.querySelectorAll("script");
+        scripts.forEach(function(s) {
+          var ns = document.createElement("script");
+          ns.textContent = s.textContent;
+          document.body.appendChild(ns);
+        });
+      });
+  </script>
+
+</body>
+</html>
