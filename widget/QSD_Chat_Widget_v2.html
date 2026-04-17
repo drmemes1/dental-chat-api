@@ -501,26 +501,10 @@
 (function () {
   "use strict";
   var API = "https://dental-chat-api.vercel.app/api/chat";
-  var PROMPT_URL = "https://dental-chat-api.vercel.app/quentin-bot-prompt.md";
   var isOpen = false;
   var sending = false;
   var focusTrap = [];
-  var systemPrompt = "";
   var chatHistory = [];
-
-  fetch(PROMPT_URL)
-    .then(function (res) {
-      if (!res.ok) throw new Error("Prompt fetch failed: " + res.status);
-      return res.text();
-    })
-    .then(function (text) {
-      systemPrompt = text;
-      console.log("QSD: System prompt loaded (" + text.length + " chars)");
-    })
-    .catch(function (err) {
-      console.error("QSD: Failed to load system prompt", err);
-      systemPrompt = "";
-    });
 
   var $ = function (id) { return document.getElementById(id); };
   var toggle = $("qsd-toggle");
@@ -614,7 +598,7 @@
       var res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ system: systemPrompt, messages: chatHistory })
+        body: JSON.stringify({ messages: chatHistory })
       });
       var data = await res.json();
       hideTyping();

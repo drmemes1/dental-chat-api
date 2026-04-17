@@ -1,8 +1,14 @@
+const fs = require("fs");
+const path = require("path");
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+const promptPath = path.join(process.cwd(), "public", "quentin-bot-prompt.md");
+const systemPrompt = fs.readFileSync(promptPath, "utf8");
 
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
@@ -22,7 +28,7 @@ module.exports = async function handler(req, res) {
   });
 
   try {
-    const { system, messages } = req.body;
+    const { messages } = req.body;
 
     if (!messages || !messages.length) {
       res.status(400).json({ error: "Messages are required" });
@@ -39,7 +45,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 1024,
-        system: system || "",
+        system: systemPrompt,
         messages,
       }),
     });
