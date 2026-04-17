@@ -7,9 +7,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const promptPath = path.join(process.cwd(), "public", "quentin-bot-prompt.md");
-const systemPrompt = fs.readFileSync(promptPath, "utf8");
-
 module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") {
     res.writeHead(200, CORS_HEADERS);
@@ -28,7 +25,16 @@ module.exports = async function handler(req, res) {
   });
 
   try {
+    const promptPath = path.join(process.cwd(), "public", "quentin-bot-prompt.md");
+    console.log("Prompt path:", promptPath);
+    console.log("File exists:", fs.existsSync(promptPath));
+
+    const systemPrompt = fs.readFileSync(promptPath, "utf8");
+    console.log("Prompt length:", systemPrompt.length);
+    console.log("Prompt preview:", systemPrompt.substring(0, 100));
+
     const { messages } = req.body;
+    console.log("Messages received:", JSON.stringify(messages));
 
     if (!messages || !messages.length) {
       res.status(400).json({ error: "Messages are required" });
@@ -52,17 +58,21 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const err = await response.text();
+      console.error("Anthropic API error:", response.status, err);
       throw new Error(`Anthropic API: ${response.status} ${err}`);
     }
 
     const data = await response.json();
+    console.log("Anthropic response:", JSON.stringify(data).substring(0, 200));
+
     const responseText =
       data.content?.[0]?.text ||
       "I'm sorry, I couldn't process that. Please call us at (718) 339-8852.";
 
     res.status(200).json({ response: responseText });
   } catch (error) {
-    console.error("Chat error:", error);
+    console.error("Chat error:", error.message);
+    console.error("Stack:", error.stack);
     res.status(500).json({
       response:
         "I'm sorry, something went wrong. Please call us at (718) 339-8852.",
