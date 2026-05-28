@@ -25,9 +25,25 @@ module.exports = async function handler(req, res) {
   });
 
   try {
-    const promptPath = path.join(process.cwd(), "public", "quentin-bot-prompt.md");
+    const { messages, tenantId } = req.body;
+
+    const TENANT_PATTERN = /^[a-z0-9-]+$/;
+    const tenant = typeof tenantId === "string" && TENANT_PATTERN.test(tenantId)
+      ? tenantId
+      : "quentin-smile";
+
+    const promptPath = path.join(process.cwd(), "public", "tenants", `${tenant}.md`);
+    console.log("Tenant:", tenant);
     console.log("Prompt path:", promptPath);
     console.log("File exists:", fs.existsSync(promptPath));
+
+    if (!fs.existsSync(promptPath)) {
+      res.status(404).json({
+        response:
+          "I'm sorry, I'm not set up for this office yet. Please call the practice directly and they'll be happy to help!",
+      });
+      return;
+    }
 
     const systemPrompt = fs.readFileSync(promptPath, "utf8");
     console.log("Prompt length:", systemPrompt.length);
@@ -36,7 +52,6 @@ module.exports = async function handler(req, res) {
     const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" });
     const systemWithDate = systemPrompt + "\n\nToday is " + today + ". Use this to answer questions about whether the office is open today, tomorrow, or any specific day.";
 
-    const { messages } = req.body;
     console.log("Messages received:", JSON.stringify(messages));
 
     if (!messages || !messages.length) {
