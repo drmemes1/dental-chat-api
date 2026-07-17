@@ -130,6 +130,33 @@ async function sendMessage(recipientId, text) {
   return data;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Show "seen" + "typing…" so replies feel like a real person, not an instant bot.
+async function sendAction(recipientId, action) {
+  const token = process.env.PAGE_ACCESS_TOKEN;
+  if (!token) return;
+  try {
+    await fetch(
+      `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
+      }
+    );
+  } catch (e) {
+    console.error("sendAction error:", e.message);
+  }
+}
+
+// A human-feeling pause: scales with reply length, floored/capped for realism.
+function humanDelayMs(text) {
+  return Math.min(6000, Math.max(1800, (text ? text.length : 0) * 30));
+}
+
 async function emailLead(fromId, phone, history) {
   if (!process.env.RESEND_API_KEY) {
     console.log("RESEND_API_KEY not set - lead not emailed. Phone:", phone);
@@ -228,9 +255,14 @@ async function handleEvent(event) {
 
   // ----- Echo: a message the Page sent (a human in the Inbox OR our own bot) -----
   if (message.is_echo) {
+    // Messages sent by THIS app carry our app_id in the echo. Those are the bot's
+    // own replies -> never treat them as a human takeover.
+    const ourAppId = process.env.META_APP_ID || "1919107958760742";
+    if (message.app_id && String(message.app_id) === ourAppId) return;
+    // Fallback dedupe by message id in case app_id is absent.
     const isOurs = message.mid ? await rGet(`botmid:${message.mid}`) : null;
-    if (isOurs) return; // our own bot's message - ignore
-    // A human replied from the Page -> pause the bot for that person.
+    if (isOurs) return;
+    // A real human replied from the Page/Inbox -> pause the bot for that person.
     const userId = event.recipient && event.recipient.id;
     if (userId) {
       await rSetEx(`paused:${userId}`, "1", PAUSE_TTL);
@@ -273,6 +305,10 @@ async function handleEvent(event) {
   }
   history.push({ role: "user", content: text });
 
+  // Human feel: mark the message seen and start a typing indicator before replying.
+  await sendAction(senderId, "mark_seen");
+  await sendAction(senderId, "typing_on");
+
   // Lead capture: the visitor left a phone number -> email the office and hand off.
   if (PHONE_RE.test(text)) {
     const phone = text.match(PHONE_RE)[0].trim();
@@ -285,6 +321,7 @@ async function handleEvent(event) {
       JSON.stringify(history.slice(-HISTORY_MAX)),
       MEMORY_TTL
     );
+    await sleep(humanDelayMs(confirm));
     await sendMessage(senderId, confirm);
     await rSetEx(`paused:${senderId}`, "1", PAUSE_TTL); // hand to a human
     return;
@@ -298,5 +335,6 @@ async function handleEvent(event) {
     JSON.stringify(history.slice(-HISTORY_MAX)),
     MEMORY_TTL
   );
+  await sleep(humanDelayMs(reply));
   await sendMessage(senderId, reply);
 }
