@@ -63,16 +63,23 @@ const rSetEx = (k, v, ttl) => redis(["SET", k, v, "EX", String(ttl)]);
 const rDel = (k) => redis(["DEL", k]);
 
 // ---------- helpers ----------
-function verifySignature(rawBody, signatureHeader) {
-  const secret = process.env.META_APP_SECRET;
-  if (!secret) return true; // not set -> skip (set it for production!)
-  if (!signatureHeader) return false;
+function signatureMatches(rawBody, signatureHeader, secret) {
+  if (!secret || !signatureHeader) return false;
   const expected =
     "sha256=" +
     crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
   const a = Buffer.from(signatureHeader);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// Facebook events are signed with the FB app secret; Instagram events with the
+// Instagram app secret. Both webhooks hit this one URL, so accept either.
+function verifySignature(rawBody, signatureHeader) {
+  const secrets = [process.env.META_APP_SECRET, process.env.IG_APP_SECRET].filter(Boolean);
+  if (secrets.length === 0) return true; // none set -> skip (set them for production!)
+  if (!signatureHeader) return false;
+  return secrets.some((s) => signatureMatches(rawBody, signatureHeader, s));
 }
 
 function getRawBody(req) {
@@ -105,24 +112,40 @@ async function callBot(history) {
   }
 }
 
-async function sendMessage(recipientId, text) {
-  const token = process.env.PAGE_ACCESS_TOKEN;
-  if (!token) {
-    console.error("PAGE_ACCESS_TOKEN not set - cannot send reply");
+// Pick the right Send API endpoint + token per platform.
+// Instagram DMs use graph.instagram.com + an Instagram token; Facebook/Messenger
+// use graph.facebook.com + the Page token.
+function channelFor(objectType) {
+  if (objectType === "instagram") {
+    return {
+      platform: "instagram",
+      base: "https://graph.instagram.com/v21.0/me/messages",
+      token: process.env.IG_ACCESS_TOKEN,
+      missing: "IG_ACCESS_TOKEN",
+    };
+  }
+  return {
+    platform: "messenger",
+    base: "https://graph.facebook.com/v21.0/me/messages",
+    token: process.env.PAGE_ACCESS_TOKEN,
+    missing: "PAGE_ACCESS_TOKEN",
+  };
+}
+
+async function sendMessage(recipientId, text, channel) {
+  if (!channel.token) {
+    console.error(`${channel.missing} not set - cannot send reply on ${channel.platform}`);
     return null;
   }
-  const r = await fetch(
-    `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipient: { id: recipientId },
-        messaging_type: "RESPONSE",
-        message: { text },
-      }),
-    }
-  );
+  const r = await fetch(`${channel.base}?access_token=${channel.token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      messaging_type: "RESPONSE",
+      message: { text },
+    }),
+  });
   const data = await r.json();
   if (data.error) console.error("Send API error:", JSON.stringify(data.error));
   // Remember our own outbound message id so its echo doesn't trigger a false handoff.
@@ -135,18 +158,14 @@ function sleep(ms) {
 }
 
 // Show "seen" + "typing…" so replies feel like a real person, not an instant bot.
-async function sendAction(recipientId, action) {
-  const token = process.env.PAGE_ACCESS_TOKEN;
-  if (!token) return;
+async function sendAction(recipientId, action, channel) {
+  if (!channel.token) return;
   try {
-    await fetch(
-      `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
-      }
-    );
+    await fetch(`${channel.base}?access_token=${channel.token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
+    });
   } catch (e) {
     console.error("sendAction error:", e.message);
   }
@@ -234,12 +253,14 @@ module.exports = async function handler(req, res) {
   }
 
   // 3) Process events. Haiku is fast, so we handle then return 200.
+  // payload.object is "instagram" for IG DMs, "page" for Facebook/Messenger.
+  const channel = channelFor(payload.object);
   try {
     const entries = payload.entry || [];
     for (const entry of entries) {
       const events = entry.messaging || [];
       for (const event of events) {
-        await handleEvent(event);
+        await handleEvent(event, channel);
       }
     }
   } catch (e) {
@@ -249,16 +270,19 @@ module.exports = async function handler(req, res) {
   return res.status(200).send("EVENT_RECEIVED");
 };
 
-async function handleEvent(event) {
+async function handleEvent(event, channel) {
   const message = event.message;
   if (!message) return; // ignore reactions, read receipts, postbacks (v1)
 
   // ----- Echo: a message the Page sent (a human in the Inbox OR our own bot) -----
   if (message.is_echo) {
     // Messages sent by THIS app carry our app_id in the echo. Those are the bot's
-    // own replies -> never treat them as a human takeover.
-    const ourAppId = process.env.META_APP_ID || "1919107958760742";
-    if (message.app_id && String(message.app_id) === ourAppId) return;
+    // own replies -> never treat them as a human takeover. Accept the FB and IG app ids.
+    const ourAppIds = [
+      process.env.META_APP_ID || "1919107958760742",
+      process.env.IG_APP_ID || "2114106355985643",
+    ];
+    if (message.app_id && ourAppIds.includes(String(message.app_id))) return;
     // Fallback dedupe by message id in case app_id is absent.
     const isOurs = message.mid ? await rGet(`botmid:${message.mid}`) : null;
     if (isOurs) return;
@@ -306,8 +330,8 @@ async function handleEvent(event) {
   history.push({ role: "user", content: text });
 
   // Human feel: mark the message seen and start a typing indicator before replying.
-  await sendAction(senderId, "mark_seen");
-  await sendAction(senderId, "typing_on");
+  await sendAction(senderId, "mark_seen", channel);
+  await sendAction(senderId, "typing_on", channel);
 
   // Lead capture: the visitor left a phone number -> email the office and hand off.
   if (PHONE_RE.test(text)) {
@@ -322,7 +346,7 @@ async function handleEvent(event) {
       MEMORY_TTL
     );
     await sleep(humanDelayMs(confirm));
-    await sendMessage(senderId, confirm);
+    await sendMessage(senderId, confirm, channel);
     await rSetEx(`paused:${senderId}`, "1", PAUSE_TTL); // hand to a human
     return;
   }
@@ -336,5 +360,5 @@ async function handleEvent(event) {
     MEMORY_TTL
   );
   await sleep(humanDelayMs(reply));
-  await sendMessage(senderId, reply);
+  await sendMessage(senderId, reply, channel);
 }
