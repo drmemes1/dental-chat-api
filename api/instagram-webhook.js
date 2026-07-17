@@ -38,8 +38,9 @@ const PAUSE_TTL = 60 * 60 * 24; // bot stays paused 24h after a human replies
 
 // ---------- tiny Upstash Redis REST helpers (no extra npm deps needed) ----------
 async function redis(command) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Vercel's Upstash integration injects KV_REST_API_*; fall back to UPSTASH_* names.
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null; // memory/handoff disabled if not configured
   try {
     const r = await fetch(url, {
@@ -195,12 +196,14 @@ module.exports = async function handler(req, res) {
     } catch (e) {
       return res.status(400).json({ error: "Bad JSON" });
     }
-  } else if (req.body) {
-    // Fallback if the platform pre-parsed the body (signature can't be checked here).
-    console.warn("Raw body unavailable; skipping signature check.");
+  } else if (req.body && !process.env.META_APP_SECRET) {
+    // Only accept a pre-parsed body when we're not enforcing signatures at all.
+    console.warn("Raw body unavailable; signature not enforced (no META_APP_SECRET).");
     payload = req.body;
   } else {
-    return res.status(400).json({ error: "Empty body" });
+    // Fail closed: if a secret is configured but we can't verify, reject.
+    console.error("Raw body unavailable; cannot verify signature - rejecting");
+    return res.status(401).json({ error: "Cannot verify signature" });
   }
 
   // 3) Process events. Haiku is fast, so we handle then return 200.
