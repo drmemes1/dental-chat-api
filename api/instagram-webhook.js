@@ -228,9 +228,14 @@ async function handleEvent(event) {
 
   // ----- Echo: a message the Page sent (a human in the Inbox OR our own bot) -----
   if (message.is_echo) {
+    // Messages sent by THIS app carry our app_id in the echo. Those are the bot's
+    // own replies -> never treat them as a human takeover.
+    const ourAppId = process.env.META_APP_ID || "1919107958760742";
+    if (message.app_id && String(message.app_id) === ourAppId) return;
+    // Fallback dedupe by message id in case app_id is absent.
     const isOurs = message.mid ? await rGet(`botmid:${message.mid}`) : null;
-    if (isOurs) return; // our own bot's message - ignore
-    // A human replied from the Page -> pause the bot for that person.
+    if (isOurs) return;
+    // A real human replied from the Page/Inbox -> pause the bot for that person.
     const userId = event.recipient && event.recipient.id;
     if (userId) {
       await rSetEx(`paused:${userId}`, "1", PAUSE_TTL);
