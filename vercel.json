@@ -6,6 +6,9 @@
     },
     "api/notes-chat.js": {
       "maxDuration": 60
+    },
+    "api/instagram-webhook.js": {
+      "maxDuration": 60
     }
   }
 }
