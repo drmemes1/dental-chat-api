@@ -130,6 +130,33 @@ async function sendMessage(recipientId, text) {
   return data;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Show "seen" + "typing…" so replies feel like a real person, not an instant bot.
+async function sendAction(recipientId, action) {
+  const token = process.env.PAGE_ACCESS_TOKEN;
+  if (!token) return;
+  try {
+    await fetch(
+      `https://graph.facebook.com/v21.0/me/messages?access_token=${token}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient: { id: recipientId }, sender_action: action }),
+      }
+    );
+  } catch (e) {
+    console.error("sendAction error:", e.message);
+  }
+}
+
+// A human-feeling pause: scales with reply length, floored/capped for realism.
+function humanDelayMs(text) {
+  return Math.min(6000, Math.max(1800, (text ? text.length : 0) * 30));
+}
+
 async function emailLead(fromId, phone, history) {
   if (!process.env.RESEND_API_KEY) {
     console.log("RESEND_API_KEY not set - lead not emailed. Phone:", phone);
@@ -278,6 +305,10 @@ async function handleEvent(event) {
   }
   history.push({ role: "user", content: text });
 
+  // Human feel: mark the message seen and start a typing indicator before replying.
+  await sendAction(senderId, "mark_seen");
+  await sendAction(senderId, "typing_on");
+
   // Lead capture: the visitor left a phone number -> email the office and hand off.
   if (PHONE_RE.test(text)) {
     const phone = text.match(PHONE_RE)[0].trim();
@@ -290,6 +321,7 @@ async function handleEvent(event) {
       JSON.stringify(history.slice(-HISTORY_MAX)),
       MEMORY_TTL
     );
+    await sleep(humanDelayMs(confirm));
     await sendMessage(senderId, confirm);
     await rSetEx(`paused:${senderId}`, "1", PAUSE_TTL); // hand to a human
     return;
@@ -303,5 +335,6 @@ async function handleEvent(event) {
     JSON.stringify(history.slice(-HISTORY_MAX)),
     MEMORY_TTL
   );
+  await sleep(humanDelayMs(reply));
   await sendMessage(senderId, reply);
 }
